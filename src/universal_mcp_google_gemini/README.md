@@ -1,5 +1,7 @@
-Welcome to the **Universal MCP Google-gemini API**.
-This project provides a starting point for your API application, generated automatically by **MCP CLI** to help you kickstart your development quickly.
+**Universal MCP Google-gemini API**.
+
+An MCP Server for the Universal Mcp Google-Gemini API.
+
 ---
 ## 📋 Prerequisites
 Before you begin, ensure you have met the following requirements:
