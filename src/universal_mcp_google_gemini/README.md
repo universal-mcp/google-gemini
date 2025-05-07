@@ -1,10 +1,10 @@
-# Gemini MCP Server
+# Google-Gemini MCP Server
 
-An MCP Server for the Gemini API.
+An MCP Server for the Google-Gemini API.
 
 ## 🛠️ Tool List
 
-This is automatically generated from OpenAPI schema for the Gemini API.
+This is automatically generated from OpenAPI schema for the Google-Gemini API.
 
 | Tool                       | Description                                                                                                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
