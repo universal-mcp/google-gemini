@@ -6,7 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class GeminiapiApp(APIApplication):
+class GeminiApp(APIApplication):
     def __init__(self, integration: Integration = None, **kwargs) -> None:
         super().__init__(name='geminiapiapp', integration=integration, **kwargs)
         self.base_url = "https://generativelanguage.googleapis.com"
@@ -67,7 +67,6 @@ class GeminiapiApp(APIApplication):
         logger.debug(f"Making DELETE request to {url} with params: {actual_params}")
         return super()._delete(url, params=actual_params)
 
-    # --- Corrected Tool Method ---
 
     def text_only_input(
         self,
@@ -146,7 +145,15 @@ class GeminiapiApp(APIApplication):
 
     # --- Rest of the tool methods (same as previous correction) ---
     def fetch_model(self) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Retrieves the configuration details for the Gemini 1.5 Flash-8B model via a GET request.
+
+        Returns:
+            dict[str, Any]: model
+
+        Tags:
+            Models
+        """
         url = f"{self.base_url}/v1beta/models/gemini-1.5-flash-8b-exp-0827"
         query_params = {}
         response = self._get(url, params=query_params)
@@ -154,7 +161,19 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def fetch_models(self, pageSize=None, pageToken=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Retrieves a paginated list of available models, supporting page size and token parameters for result navigation.
+
+        Args:
+            pageSize (string): The `pageSize` parameter specifies the maximum number of items to include in each page of the response for the GET operation at the `/v1beta/models` path. Example: '5'.
+            pageToken (string): Used in GET requests to specify the page token for fetching the next page of results. Example: 'Chxtb2RlbHMvZ2VtaW5pLTEuNS1wcm8tbGF0ZXN0'.
+
+        Returns:
+            dict[str, Any]: models
+
+        Tags:
+            Models
+        """
         url = f"{self.base_url}/v1beta/models"
         query_params = {k: v for k, v in [('pageSize', pageSize), ('pageToken', pageToken)] if v is not None}
         response = self._get(url, params=query_params)
@@ -162,26 +181,38 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def generate_atext_stream(self, alt=None, contents=None) -> Any:
-        # ... (keep the implementation as before) ...
-        request_body = {
-            'contents': contents,
-        }
-        request_body = {k: v for k, v in request_body.items() if v is not None}
-        url = f"{self.base_url}/v1beta/models/gemini-1.5-flash-8b-exp-0827:streamGenerateContent"
-        query_params = {k: v for k, v in [('alt', alt)] if v is not None}
-        response = self._post(url, data=request_body, params=query_params)
-        response.raise_for_status()
-        return response.json()
+        """
+        Generates a streaming response from the Gemini 1.5 Flash model for multimodal input content.
 
-    # ... (include all other tool methods like generate_atext_stream, resumable_upload_request,
-    # prompt_document, text_tokens, fetch_tuned_models, create_atuned_model,
-    # prompt_the_tuned_model, delete_tuned_model, generate_embeddings, batch_embeddings,
-    # discovery_document - they can remain as they were in the previous corrected version,
-    # as they now correctly rely on the overridden _get/_post/_delete which handle the key param
-    # and the overridden _get_headers which prevents the incorrect header.)
+        Args:
+            alt (string): Specifies the alternative format for the response, commonly set to "sse" for server-sent events, allowing for streaming of the generated content. Example: 'sse'.
+            contents (array): contents
+                Example:
+                ```json
+                {
+                  "contents": [
+                    {
+                      "parts": [
+                        {
+                          "text": "Tell me about this instrument"
+                        },
+                        {
+                          "inline_data": {
+                            "mime_type": "image/jpeg"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                ```
 
-    def generate_atext_stream(self, alt=None, contents=None) -> Any:
-        # ... (keep the implementation as before) ...
+        Returns:
+            Any: generate a text stream
+
+        Tags:
+            Text Generation
+        """
         request_body = {
             'contents': contents,
         }
@@ -193,7 +224,26 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def resumable_upload_request(self, file=None) -> Any:
-        # ... (keep the implementation as before) ...
+        """
+        Uploads a file to storage using the POST method, with headers specifying upload protocol, command, content length, and content type.
+
+        Args:
+            file (object): file
+                Example:
+                ```json
+                {
+                  "file": {
+                    "display_name": "state_of_the_union_address.mp3"
+                  }
+                }
+                ```
+
+        Returns:
+            Any: resumable upload request / resumable upload request / resumable upload request / upload request
+
+        Tags:
+            Document Processing
+        """
         request_body = {
             'file': file,
         }
@@ -205,7 +255,38 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def prompt_document(self, contents=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Generates content using the Gemini model, accepting input prompts and returning a streamed response across various media types, such as text, images, and audio.
+
+        Args:
+            contents (array): contents
+                Example:
+                ```json
+                {
+                  "contents": [
+                    {
+                      "parts": [
+                        {
+                          "text": "Summarize the uploaded document."
+                        },
+                        {
+                          "file_data": {
+                            "file_uri": "{{FILE_URI}}",
+                            "mime_type": "application/pdf"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+                ```
+
+        Returns:
+            dict[str, Any]: prompt document
+
+        Tags:
+            Document Processing
+        """
         request_body = {
             'contents': contents,
         }
@@ -217,7 +298,41 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def text_tokens(self, contents=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Calculates the number of tokens and billable characters for input content when using the Gemini 1.5 Flash 8B model.
+
+        Args:
+            contents (array): contents
+                Example:
+                ```json
+                {
+                  "contents": [
+                    {
+                      "parts": [
+                        {
+                          "text": "Hi, my name is Bob."
+                        }
+                      ],
+                      "role": "user"
+                    },
+                    {
+                      "parts": [
+                        {
+                          "text": "Hi Bob"
+                        }
+                      ],
+                      "role": "model"
+                    }
+                  ]
+                }
+                ```
+
+        Returns:
+            dict[str, Any]: text tokens / chat tokens / media tokens
+
+        Tags:
+            Count Tokens
+        """
         request_body = {
             'contents': contents,
         }
@@ -229,7 +344,18 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def fetch_tuned_models(self, page_size=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Retrieves a list of tuned models at the specified page size using the GET method.
+
+        Args:
+            page_size (string): Specifies the maximum number of items to return in a single response page. Example: '10'.
+
+        Returns:
+            dict[str, Any]: fetch models Copy
+
+        Tags:
+            Fine Tunning
+        """
         url = f"{self.base_url}/v1beta/tunedModels"
         query_params = {k: v for k, v in [('page_size', page_size)] if v is not None}
         response = self._get(url, params=query_params)
@@ -237,7 +363,100 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def create_atuned_model(self, base_model=None, display_name=None, tuning_task=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Creates a tuned model using the "POST" method at the "/v1beta/tunedModels" endpoint and returns a response upon successful creation.
+
+        Args:
+            base_model (string): base_model Example: 'models/gemini-1.5-flash-001-tuning'.
+            display_name (string): display_name Example: 'number generator model'.
+            tuning_task (object): tuning_task
+                Example:
+                ```json
+                {
+                  "base_model": "models/gemini-1.5-flash-001-tuning",
+                  "display_name": "number generator model",
+                  "tuning_task": {
+                    "hyperparameters": {
+                      "batch_size": 2,
+                      "epoch_count": 5,
+                      "learning_rate": 0.001
+                    },
+                    "training_data": {
+                      "examples": {
+                        "examples": [
+                          {
+                            "output": "2",
+                            "text_input": "1"
+                          },
+                          {
+                            "output": "4",
+                            "text_input": "3"
+                          },
+                          {
+                            "output": "-2",
+                            "text_input": "-3"
+                          },
+                          {
+                            "output": "twenty three",
+                            "text_input": "twenty two"
+                          },
+                          {
+                            "output": "two hundred one",
+                            "text_input": "two hundred"
+                          },
+                          {
+                            "output": "one hundred",
+                            "text_input": "ninety nine"
+                          },
+                          {
+                            "output": "9",
+                            "text_input": "8"
+                          },
+                          {
+                            "output": "-97",
+                            "text_input": "-98"
+                          },
+                          {
+                            "output": "1,001",
+                            "text_input": "1,000"
+                          },
+                          {
+                            "output": "10,100,001",
+                            "text_input": "10,100,000"
+                          },
+                          {
+                            "output": "fourteen",
+                            "text_input": "thirteen"
+                          },
+                          {
+                            "output": "eighty one",
+                            "text_input": "eighty"
+                          },
+                          {
+                            "output": "two",
+                            "text_input": "one"
+                          },
+                          {
+                            "output": "four",
+                            "text_input": "three"
+                          },
+                          {
+                            "output": "eight",
+                            "text_input": "seven"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+                ```
+
+        Returns:
+            dict[str, Any]: create a tuned model
+
+        Tags:
+            Fine Tunning
+        """
         request_body = {
             'base_model': base_model,
             'display_name': display_name,
@@ -251,7 +470,33 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def prompt_the_tuned_model(self, tunedModel, contents=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Generates content using a specified tuned model defined at path "/v1beta/{tunedModel}:generateContent" by sending a POST request.
+
+        Args:
+            tunedModel (string): tunedModel
+            contents (array): contents
+                Example:
+                ```json
+                {
+                  "contents": [
+                    {
+                      "parts": [
+                        {
+                          "text": "LXIII"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                ```
+
+        Returns:
+            dict[str, Any]: prompt the tuned model
+
+        Tags:
+            Fine Tunning
+        """
         if tunedModel is None:
             raise ValueError("Missing required parameter 'tunedModel'")
         request_body = {
@@ -265,7 +510,18 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def delete_tuned_model(self, tunedModel) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Deletes a specified tuned model and returns a success status upon removal.
+
+        Args:
+            tunedModel (string): tunedModel
+
+        Returns:
+            dict[str, Any]: delete tuned model
+
+        Tags:
+            Fine Tunning
+        """
         if tunedModel is None:
             raise ValueError("Missing required parameter 'tunedModel'")
         url = f"{self.base_url}/v1beta/{tunedModel}"
@@ -275,7 +531,32 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def generate_embeddings(self, content=None, model=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Generates a text embedding vector from input text using the specified Gemini Embedding model, allowing for semantic analysis and comparison of textual content.
+
+        Args:
+            content (object): content
+            model (string): model
+                Example:
+                ```json
+                {
+                  "content": {
+                    "parts": [
+                      {
+                        "text": "Hello world"
+                      }
+                    ]
+                  },
+                  "model": "models/text-embedding-004"
+                }
+                ```
+
+        Returns:
+            dict[str, Any]: generate embeddings
+
+        Tags:
+            Embeddings
+        """
         request_body = {
             'content': content,
             'model': model,
@@ -288,7 +569,55 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def batch_embeddings(self, requests=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Generates batch embeddings for a list of text inputs using the "text-embedding-004" model via a POST request to the "/v1beta/models/text-embedding-004:batchEmbedContents" endpoint.
+
+        Args:
+            requests (array): requests
+                Example:
+                ```json
+                {
+                  "requests": [
+                    {
+                      "content": {
+                        "parts": [
+                          {
+                            "text": "What is the meaning of life?"
+                          }
+                        ]
+                      },
+                      "model": "models/text-embedding-004"
+                    },
+                    {
+                      "content": {
+                        "parts": [
+                          {
+                            "text": "How much wood would a woodchuck chuck?"
+                          }
+                        ]
+                      },
+                      "model": "models/text-embedding-004"
+                    },
+                    {
+                      "content": {
+                        "parts": [
+                          {
+                            "text": "How does the brain work?"
+                          }
+                        ]
+                      },
+                      "model": "models/text-embedding-004"
+                    }
+                  ]
+                }
+                ```
+
+        Returns:
+            dict[str, Any]: batch embeddings
+
+        Tags:
+            Embeddings
+        """
         request_body = {
             'requests': requests,
         }
@@ -300,7 +629,15 @@ class GeminiapiApp(APIApplication):
         return response.json()
 
     def discovery_document(self, version=None) -> Dict[str, Any]:
-        # ... (keep the implementation as before) ...
+        """
+        Retrieves discovery metadata for REST APIs, including available endpoints and parameters, based on the specified version.
+
+        Args:
+            version (string): Specifies the API version to use for the request, allowing clients to target a specific release without modifying the URI structure. Example: 'v1beta'.
+
+        Returns:
+            dict[str, Any]: Get Discovery Document
+        """
         url = f"{self.base_url}/$discovery/rest"
         query_params = {k: v for k, v in [('version', version)] if v is not None}
         response = self._get(url, params=query_params)
