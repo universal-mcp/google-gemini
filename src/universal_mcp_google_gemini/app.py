@@ -116,7 +116,7 @@ class GoogleGeminiApp(APIApplication):
             dict[str, Any]: text-only input / text-and-image input / interractive chat / generate content from uploaded file / generate content from uploaded file / video[2]: generate content from uploaded file / video[3]: generate content from uploaded file / generate content from uploaded file / single-turn function calling / multi turn function call / JSON mode / random / generation config example
 
         Tags:
-            Function Calling
+            Function Calling, important
         """
         # Ensure contents is not None, as it's a required parameter based on the OpenAPI spec
         if contents is None:
@@ -152,7 +152,7 @@ class GoogleGeminiApp(APIApplication):
             dict[str, Any]: model
 
         Tags:
-            Models
+            Models, important
         """
         url = f"{self.base_url}/v1beta/models/gemini-1.5-flash-8b-exp-0827"
         query_params = {}
@@ -172,7 +172,7 @@ class GoogleGeminiApp(APIApplication):
             dict[str, Any]: models
 
         Tags:
-            Models
+            Models, important
         """
         url = f"{self.base_url}/v1beta/models"
         query_params = {k: v for k, v in [('pageSize', pageSize), ('pageToken', pageToken)] if v is not None}
