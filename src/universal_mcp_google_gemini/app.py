@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class GoogleGeminiApp(APIApplication):
     def __init__(self, integration: Integration = None, **kwargs) -> None:
-        super().__init__(name='geminiapiapp', integration=integration, **kwargs)
+        super().__init__(name='google-gemini', integration=integration, **kwargs)
         self.base_url = "https://generativelanguage.googleapis.com"
 
     def _get_headers(self) -> Dict[str, str]:
