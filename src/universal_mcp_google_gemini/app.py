@@ -26,7 +26,7 @@ class GoogleGeminiApp(APIApplication):
         if 'key' not in actual_params and self.integration:
             try:
                 credentials = self.integration.get_credentials()
-                api_key = credentials.get("api_key")
+                api_key = credentials.get("api_key") or credentials.get("API_KEY") or credentials.get("apiKey")
                 if api_key:
                     actual_params['key'] = api_key
                     logger.debug("Added API key as query parameter.")
