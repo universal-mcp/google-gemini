@@ -2006,7 +2006,7 @@ wheels = [
 
 [[package]]
 name = "universal-mcp"
-version = "0.1.20"
+version = "0.1.21rc2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cookiecutter" },
@@ -2025,14 +2025,14 @@ dependencies = [
     { name = "rich" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/c6/c1058274059cb1e37cc9f4fb54c25159f4d132651152c86b7a11e7895df3/universal_mcp-0.1.20.tar.gz", hash = "sha256:2657ccddca2f26682395736ad4a248f090c577e3a511e03a867a3bb712b6de3c", size = 74895, upload-time = "2025-05-22T09:56:36.262Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b9/bc/b33826d6a03fce4abd11a5b1203ce9ba6cd5f9d7a2fde9f979175cd144ee/universal_mcp-0.1.21rc2.tar.gz", hash = "sha256:d163b097df9b3d137cf4f21388a62ee76cef8e0cb891ffe163f9c988a6cd73a7", size = 75751, upload-time = "2025-05-23T06:34:33.543Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/70/661dcb6a57be211a100f406b24c422171d19b61eafa8c543bf4fdeb9535c/universal_mcp-0.1.20-py3-none-any.whl", hash = "sha256:e1ec741bc2bbd2ee89cefd6789c66a2d972ab3b0bc901fe7fc038267b440fc00", size = 84790, upload-time = "2025-05-22T09:56:35.234Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/16/0d543ccfa79eb4dedf257d8484a30d5df62980450110161def62cad07d7b/universal_mcp-0.1.21rc2-py3-none-any.whl", hash = "sha256:41ec0b0f0450640ad1767f26571c6f5c37581bce180e200bce598cc13f2a7d79", size = 85731, upload-time = "2025-05-23T06:34:32.117Z" },
 ]
 
 [[package]]
 name = "universal-mcp-google-gemini"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "universal-mcp" },
@@ -2054,7 +2054,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.0.0,<9.0.0" },
     { name = "pytest-cov", marker = "extra == 'test'" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "universal-mcp", specifier = ">=0.1.20" },
+    { name = "universal-mcp", specifier = ">=0.1.21rc2" },
 ]
 provides-extras = ["test", "dev"]
 

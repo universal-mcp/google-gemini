@@ -1,10 +1,12 @@
-from typing import Any, Dict,List
+from typing import Any, Dict, List, Literal, Optional # Added Literal for type hinting
 from universal_mcp.applications import APIApplication
 from universal_mcp.integrations import Integration
 import httpx
 import logging
 
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class GoogleGeminiApp(APIApplication):
     def __init__(self, integration: Integration = None, **kwargs) -> None:
@@ -26,17 +28,22 @@ class GoogleGeminiApp(APIApplication):
         if 'key' not in actual_params and self.integration:
             try:
                 credentials = self.integration.get_credentials()
+                if not isinstance(credentials, dict):
+                    logger.warning(f"Integration credentials for {self.name} are not a dictionary. Cannot retrieve API key.")
+                    return actual_params # or raise error
+
                 api_key = credentials.get("api_key") or credentials.get("API_KEY") or credentials.get("apiKey")
                 if api_key:
                     actual_params['key'] = api_key
                     logger.debug("Added API key as query parameter.")
                 else:
-                      # This might happen if the store returned credentials without an api_key field
-                    logger.warning("API key retrieved from integration credentials is None or empty.")
+                    logger.warning(f"API key not found in integration credentials for {self.name} using keys: api_key, API_KEY, apiKey.")
             except Exception as e:
-                logger.error(f"Error retrieving API key from integration: {e}")
+                logger.error(f"Error retrieving API key from integration for {self.name}: {e}")
+        elif not self.integration:
+            logger.warning(f"No integration provided for {self.name}. API key cannot be added automatically.")
         return actual_params
-
+    
     def _get(self, url: str, params: Dict[str, Any] | None = None) -> httpx.Response:
         """
         Make a GET request, ensuring the API key is added as a query parameter.
@@ -44,20 +51,20 @@ class GoogleGeminiApp(APIApplication):
         actual_params = self._add_api_key_param(params)
         logger.debug(f"Making GET request to {url} with params: {actual_params}")
         return super()._get(url, params=actual_params)
-
+    
     def _post(
         self, url: str, data: Dict[str, Any], params: Dict[str, Any] | None = None
     ) -> httpx.Response:
         """
-        Make a POST request, ensuring the API key is added as a query parameter.
+        Make a POST request, ensuring the API key is added as a query parameter
+        and content_type is explicitly set to application/json.
         """
         actual_params = self._add_api_key_param(params)
         logger.debug(
             f"Making POST request to {url} with params: {actual_params} and data: {data}"
         )
-        # Note: The parent _post in application.py still uses httpx.post directly
-        # and calls self._get_headers() again, which is fine because our override returns {}.
-        return super()._post(url, data=data, params=actual_params)
+        # Explicitly set content_type for clarity and robustness
+        return super()._post(url, data=data, params=actual_params, content_type="application/json")
 
     def _delete(self, url: str, params: Dict[str, Any] | None = None) -> httpx.Response:
         """
@@ -67,86 +74,9 @@ class GoogleGeminiApp(APIApplication):
         logger.debug(f"Making DELETE request to {url} with params: {actual_params}")
         return super()._delete(url, params=actual_params)
 
-
-    def text_only_input(
-        self,
-        contents: List[Dict[str, Any]], # Removed key=None
-        generationConfig: Dict[str, Any] | None = None,
-        safetySettings: List[Dict[str, Any]] | None = None
-    ) -> Dict[str, Any]:
-        """
-        Generates content using the Gemini 1.5 Flash model via POST request.
-
-        The API key is automatically added as a query parameter by the overridden _post method.
-
-        Args:
-            contents (list[dict[str, Any]]): contents Example: "[{'parts': [{'text': 'Write a story about a magic backpack.'}]}]".
-            generationConfig (dict[str, Any], optional): generationConfig
-            safetySettings (list[dict[str, Any]], optional): safetySettings
-                Example:
-                ```json
-                {
-                  "contents": [
-                    {
-                      "parts": [
-                        {
-                          "text": "List 5 popular cookie recipes"
-                        }
-                      ]
-                    }
-                  ],
-                  "generationConfig": {
-                    "response_mime_type": "application/json",
-                    "response_schema": {
-                      "items": {
-                        "properties": {
-                          "recipe_name": {
-                            "type": "STRING"
-                          }
-                        },
-                        "type": "OBJECT"
-                      },
-                      "type": "ARRAY"
-                    }
-                  }
-                }
-                ```
-
-        Returns:
-            dict[str, Any]: text-only input / text-and-image input / interractive chat / generate content from uploaded file / generate content from uploaded file / video[2]: generate content from uploaded file / video[3]: generate content from uploaded file / generate content from uploaded file / single-turn function calling / multi turn function call / JSON mode / random / generation config example
-
-        Tags:
-            Function Calling, important
-        """
-        # Ensure contents is not None, as it's a required parameter based on the OpenAPI spec
-        if contents is None:
-            raise ValueError("Missing required parameter 'contents'")
-        if not isinstance(contents, list):
-            # Add type checking for robustness based on expected input
-            raise TypeError("'contents' must be a list")
-
-        request_body = {
-            'contents': contents,
-        }
-        if generationConfig is not None:
-            request_body['generationConfig'] = generationConfig
-        if safetySettings is not None:
-            request_body['safetySettings'] = safetySettings
-
-        url = f"{self.base_url}/v1beta/models/gemini-1.5-flash-8b-exp-0827:generateContent"
-        # No explicit 'key' parameter needed here; _post handles it from integration
-        query_params = {}
-
-        logger.debug(f"Calling _post for generateContent with body: {request_body} and params: {query_params}")
-
-        response = self._post(url, data=request_body, params=query_params)
-        response.raise_for_status() # This will raise HTTPError for 400 status
-        return response.json()
-
-    # --- Rest of the tool methods (same as previous correction) ---
     def fetch_model(self) -> Dict[str, Any]:
         """
-        Retrieves the configuration details for the Gemini 1.5 Flash-8B model via a GET request.
+        Retrieves the configuration details of current model via a GET request.
 
         Returns:
             dict[str, Any]: model
@@ -154,7 +84,7 @@ class GoogleGeminiApp(APIApplication):
         Tags:
             Models, important
         """
-        url = f"{self.base_url}/v1beta/models/gemini-1.5-flash-8b-exp-0827"
+        url = f"{self.base_url}/v1beta/models/gemini-2.0-flash"
         query_params = {}
         response = self._get(url, params=query_params)
         response.raise_for_status()
@@ -180,32 +110,59 @@ class GoogleGeminiApp(APIApplication):
         response.raise_for_status()
         return response.json()
 
-    def generate_atext_stream(self, alt=None, contents=None) -> Any:
+    def text_only_input(
+        self,
+        query: str
+    ) -> Dict[str, Any]:
+        """
+        Generates content using the Gemini 1.5 Flash model via POST request,
+        taking a simple string query.
+
+        Args:
+            query (str): The text prompt for the model.
+                         Example: "Write a story about a magic backpack."
+
+        Returns:
+            Dict[str, Any]: The JSON response from the API.
+        
+        Raises:
+            ValueError: If the query is empty or not a string.
+            httpx.HTTPStatusError: If the API returns an error status.
+
+        Tags:
+            important
+        """
+        if not query or not isinstance(query, str):
+            raise ValueError("Query must be a non-empty string.")
+
+        contents_payload = [{'parts': [{'text': query}]}]
+
+        request_body = {
+            'contents': contents_payload,
+        }
+        model_name = "gemini-2.0-flash" 
+        
+        url = f"{self.base_url}/v1beta/models/{model_name}:generateContent"
+        
+        query_params = {} 
+
+        logger.info(f"Calling Gemini API for model: {model_name} with query: \"{query[:70]}{'...' if len(query) > 70 else ''}\"")
+        
+        response = self._post(url, data=request_body, params=query_params)
+        response.raise_for_status()
+        data = response.json()
+        try:
+            extracted_text = data['candidates'][0]['content']['parts'][0]['text']
+            return extracted_text
+        except (KeyError, IndexError, TypeError) as e:
+            return data
+    
+    def generate_atext_stream(self, query: str) -> Dict[str, Any]:
         """
         Generates a streaming response from the Gemini 1.5 Flash model for multimodal input content.
 
         Args:
-            alt (string): Specifies the alternative format for the response, commonly set to "sse" for server-sent events, allowing for streaming of the generated content. Example: 'sse'.
-            contents (array): contents
-                Example:
-                ```json
-                {
-                  "contents": [
-                    {
-                      "parts": [
-                        {
-                          "text": "Tell me about this instrument"
-                        },
-                        {
-                          "inline_data": {
-                            "mime_type": "image/jpeg"
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-                ```
+            query (str): The text prompt for the model.
 
         Returns:
             Any: generate a text stream
@@ -213,46 +170,63 @@ class GoogleGeminiApp(APIApplication):
         Tags:
             Text Generation
         """
+        if not query or not isinstance(query, str):
+            raise ValueError("Query must be a non-empty string.")
+
+        contents_payload = [{'parts': [{'text': query}]}]
+
         request_body = {
-            'contents': contents,
+            'contents': contents_payload,
         }
-        request_body = {k: v for k, v in request_body.items() if v is not None}
-        url = f"{self.base_url}/v1beta/models/gemini-1.5-flash-8b-exp-0827:streamGenerateContent"
-        query_params = {k: v for k, v in [('alt', alt)] if v is not None}
+        model_name = "gemini-2.0-flash" 
+        url = f"{self.base_url}/v1beta/models/{model_name}:streamGenerateContent"
+        query_params = {} 
+        
         response = self._post(url, data=request_body, params=query_params)
         response.raise_for_status()
-        return response.json()
-
-    def resumable_upload_request(self, file=None) -> Any:
+        data = response.json()
+        try:
+            extracted_text = data['candidates'][0]['content']['parts'][0]['text']
+            return extracted_text
+        except (KeyError, IndexError, TypeError) as e:
+            return data
+        
+    def resumable_upload_request(self, file_metadata: Optional[Dict[str, Any]] = None) -> Any:
         """
-        Uploads a file to storage using the POST method, with headers specifying upload protocol, command, content length, and content type.
+        Initiates a file upload by sending file metadata.
+        This typically returns an upload URL or session URI for subsequent data upload.
 
         Args:
-            file (object): file
-                Example:
-                ```json
-                {
-                  "file": {
-                    "display_name": "state_of_the_union_address.mp3"
-                  }
-                }
-                ```
+            file_metadata (Optional[Dict[str, Any]]): Metadata for the file to be uploaded.
+                Example: {"display_name": "my_audio_file.mp3"}
+                If None, the 'file' field will be omitted from the request if the API supports that,
+                or it might result in an error if the 'file' field is mandatory.
 
         Returns:
-            Any: resumable upload request / resumable upload request / resumable upload request / upload request
+            Any: The JSON response from the API, typically containing upload instructions
+                 or a file resource representation.
 
         Tags:
             Document Processing
         """
-        request_body = {
-            'file': file,
-        }
-        request_body = {k: v for k, v in request_body.items() if v is not None}
+        request_body: Dict[str, Any] = {}
+        if file_metadata is not None:
+            request_body['file'] = file_metadata
+        
+        if not request_body and file_metadata is None:
+            print("Warning: file_metadata is None. Sending an empty or near-empty request body.")
+            # request_body will be {} if file_metadata is None
+
         url = f"{self.base_url}/upload/v1beta/files"
-        query_params = {}
-        response = self._post(url, data=request_body, params=query_params)
-        response.raise_for_status()
-        return response.json()
+        
+        query_params = {} 
+
+        response = self._post(url, data=request_body if request_body else None, params=query_params)
+        response_json = None
+        response_json = response.json()
+
+        response.raise_for_status() # Raises an HTTPError for bad responses (4XX or 5XX)
+        return response_json if response_json else {}
 
     def prompt_document(self, contents=None) -> Dict[str, Any]:
         """
@@ -296,48 +270,61 @@ class GoogleGeminiApp(APIApplication):
         response = self._post(url, data=request_body, params=query_params)
         response.raise_for_status()
         return response.json()
-
-    def text_tokens(self, contents=None) -> Dict[str, Any]:
+    
+    def prompt_document(self, contents: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
-        Calculates the number of tokens and billable characters for input content when using the Gemini 1.5 Flash 8B model.
+        Generates content using the Gemini model with document context.
 
         Args:
-            contents (array): contents
+            contents (Optional[List[Dict[str, Any]]]): List of content parts, including text and file data.
                 Example:
                 ```json
-                {
-                  "contents": [
-                    {
-                      "parts": [
-                        {
-                          "text": "Hi, my name is Bob."
-                        }
-                      ],
-                      "role": "user"
-                    },
-                    {
-                      "parts": [
-                        {
-                          "text": "Hi Bob"
-                        }
-                      ],
-                      "role": "model"
-                    }
-                  ]
-                }
+                [
+                  {
+                    "parts": [
+                      {"text": "Summarize the uploaded document."},
+                      {"file_data": {"file_uri": "files/your_file_id", "mime_type": "application/pdf"}}
+                    ]
+                  }
+                ]
                 ```
+
+        Returns:
+            dict[str, Any]: The model's response.
+        """
+        request_body = {'contents': contents}
+        request_body = {k: v for k, v in request_body.items() if v is not None}
+        if not request_body.get('contents'): # API might require contents
+            raise ValueError("Missing required parameter 'contents' for prompt_document.")
+
+        url = f"{self.base_url}/v1beta/models/gemini-:generateContent"
+        query_params = {}
+        response = self._post(url, data=request_body, params=query_params)
+        return response.json()
+
+    def text_tokens(self, query:str) -> Dict[str, Any]:
+        """
+        Calculates the number of tokens and billable characters for input content using a gemini-2.0-flash.
+
+        Args:
+            query (str): The text prompt for the model.
 
         Returns:
             dict[str, Any]: text tokens / chat tokens / media tokens
 
         Tags:
-            Count Tokens
+            Count Tokens, important
         """
+        if not query or not isinstance(query, str):
+            raise ValueError("Query must be a non-empty string.")
+        
+        contents = [{'parts': [{'text': query}]}]
         request_body = {
             'contents': contents,
         }
         request_body = {k: v for k, v in request_body.items() if v is not None}
-        url = f"{self.base_url}/v1beta/models/gemini-1.5-flash-8b-exp-0827:countTokens"
+        model_name = "gemini-2.0-flash" 
+        url = f"{self.base_url}/v1beta/models/{model_name}:countTokens"
         query_params = {}
         response = self._post(url, data=request_body, params=query_params)
         response.raise_for_status()
@@ -529,27 +516,14 @@ class GoogleGeminiApp(APIApplication):
         response = self._delete(url, params=query_params)
         response.raise_for_status()
         return response.json()
-
-    def generate_embeddings(self, content=None, model=None) -> Dict[str, Any]:
+    
+    def generate_embeddings(self, query: str, model_name: Literal["gemini-embedding-exp-03-07", "text-embedding-004", "embedding-001"] = "gemini-embedding-exp-03-07") -> Dict[str, Any]:
         """
         Generates a text embedding vector from input text using the specified Gemini Embedding model, allowing for semantic analysis and comparison of textual content.
 
         Args:
-            content (object): content
-            model (string): model
-                Example:
-                ```json
-                {
-                  "content": {
-                    "parts": [
-                      {
-                        "text": "Hello world"
-                      }
-                    ]
-                  },
-                  "model": "models/text-embedding-004"
-                }
-                ```
+            query (str): The text to generate an embedding.
+            model_name (string): The name of the embedding model to use. Default is "gemini-embedding-exp-03-07".
 
         Returns:
             dict[str, Any]: generate embeddings
@@ -557,60 +531,29 @@ class GoogleGeminiApp(APIApplication):
         Tags:
             Embeddings
         """
+        if not query or not isinstance(query, str):
+            raise ValueError("Query must be a non-empty string.")
+                
         request_body = {
-            'content': content,
-            'model': model,
+            'model': f"models/{model_name}",  # Fully qualified model name for the body
+            'content': {                      # 'content' is a dictionary (JSON object)
+                'parts': [{'text': query}]    # 'parts' is a list of dictionaries
+            }
         }
         request_body = {k: v for k, v in request_body.items() if v is not None}
-        url = f"{self.base_url}/v1beta/models/text-embedding-004:embedContent"
+        url = f"{self.base_url}/v1beta/models/{model_name}:embedContent"
         query_params = {}
         response = self._post(url, data=request_body, params=query_params)
         response.raise_for_status()
         return response.json()
 
-    def batch_embeddings(self, requests=None) -> Dict[str, Any]:
+    def batch_embeddings(self, queries: List[str], model_name: Literal["gemini-embedding-exp-03-07", "text-embedding-004", "embedding-001"] = "gemini-embedding-exp-03-07") -> Dict[str, Any]:
         """
-        Generates batch embeddings for a list of text inputs using the "text-embedding-004" model via a POST request to the "/v1beta/models/text-embedding-004:batchEmbedContents" endpoint.
+        Generates batch embeddings for a list of text inputs using the "gemini-embedding-exp-03-07" model via a POST request to the "/v1beta/models/text-embedding-004:batchEmbedContents" endpoint.
 
         Args:
-            requests (array): requests
-                Example:
-                ```json
-                {
-                  "requests": [
-                    {
-                      "content": {
-                        "parts": [
-                          {
-                            "text": "What is the meaning of life?"
-                          }
-                        ]
-                      },
-                      "model": "models/text-embedding-004"
-                    },
-                    {
-                      "content": {
-                        "parts": [
-                          {
-                            "text": "How much wood would a woodchuck chuck?"
-                          }
-                        ]
-                      },
-                      "model": "models/text-embedding-004"
-                    },
-                    {
-                      "content": {
-                        "parts": [
-                          {
-                            "text": "How does the brain work?"
-                          }
-                        ]
-                      },
-                      "model": "models/text-embedding-004"
-                    }
-                  ]
-                }
-                ```
+            queries (List[str]): A list of texts to generate embeddings for.
+            model_name (string): The name of the embedding model to use. Default is "gemini-embedding-exp-03-07".
 
         Returns:
             dict[str, Any]: batch embeddings
@@ -618,11 +561,24 @@ class GoogleGeminiApp(APIApplication):
         Tags:
             Embeddings
         """
+        if not queries:
+            raise ValueError("Queries list cannot be empty.")
+        if not all(isinstance(q, str) and q for q in queries):
+            raise ValueError("All items in the queries list must be non-empty strings.")
+
+        individual_requests = []
+        for query_text in queries:
+            individual_requests.append({
+                'model': f"models/{model_name}", # Model specified for each request
+                'content': {
+                    'parts': [{'text': query_text}]
+                }
+            })
         request_body = {
-            'requests': requests,
+            'requests': individual_requests
         }
-        request_body = {k: v for k, v in request_body.items() if v is not None}
-        url = f"{self.base_url}/v1beta/models/text-embedding-004:batchEmbedContents"
+
+        url = f"{self.base_url}/v1beta/models/{model_name}:batchEmbedContents"
         query_params = {}
         response = self._post(url, data=request_body, params=query_params)
         response.raise_for_status()
@@ -645,7 +601,6 @@ class GoogleGeminiApp(APIApplication):
         return response.json()
 
     def list_tools(self):
-        # ... (keep the implementation as before) ...
         return [
             self.fetch_model,
             self.fetch_models,
